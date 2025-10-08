@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
 
     window.setWindowTitle("QR Clip");
     window.setWindowIcon(QIcon(":/qrclip/app_icon"));
+    window.setWindowFlags(Qt::Tool);
     window.setCentralWidget(new QrClipWidget(&window));
     window.show();
     return app.exec();
