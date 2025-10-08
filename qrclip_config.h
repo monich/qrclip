@@ -34,21 +34,28 @@
 // are those of the authors and should not be interpreted as representing
 // any official policies, either expressed or implied.
 
-#include "qrclip_config.h"
-#include "qrclip_widget.h"
-#include "qrclip_window.h"
+#ifndef QRCLIP_CONFIG_H
+#define QRCLIP_CONFIG_H
 
-#include <QtWidgets/QApplication>
+#include <QtCore/QExplicitlySharedDataPointer>
+#include <QtCore/QString>
+#include <QtCore/QVariant>
 
-int main(int argc, char *argv[])
+class QrClipConfig
 {
-    QApplication app(argc, argv);
-    QrClipConfig config;
-    QrClipWindow window(config);
+public:
+    QrClipConfig();
+    QrClipConfig(const QrClipConfig&);
+    QrClipConfig& operator=(const QrClipConfig&);
 
-    // For whatever reason setQuitOnLastWindowClosed doesn't work here
-    QObject::connect(&window, &QrClipWindow::closed, &app, &QApplication::quit);
-    window.setCentralWidget(new QrClipWidget(&window));
-    window.show();
-    return app.exec();
-}
+    ~QrClipConfig();
+
+    QVariant get(const QString&) const;
+    void set(const QString&, const QVariant&);
+
+private:
+    class Data;
+    QExplicitlySharedDataPointer<Data> d;
+};
+
+#endif // QRCLIP_CONFIG_H

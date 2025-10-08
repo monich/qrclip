@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
-
+cmake_minimum_required(VERSION 3.0)
 project(qrclip)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -19,8 +18,13 @@ pkg_check_modules(LIBQRENCODE REQUIRED libqrencode)
 set(SRC
     main.cpp
     qrclip.qrc
+    qrclip_config.cpp
+    qrclip_config.h
+    qrclip_debug.h
     qrclip_widget.cpp
-    qrclip_widget.h)
+    qrclip_widget.h
+    qrclip_window.cpp
+    qrclip_window.h)
 
 add_executable(qrclip ${SRC})
 

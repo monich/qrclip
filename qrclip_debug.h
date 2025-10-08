@@ -34,21 +34,17 @@
 // are those of the authors and should not be interpreted as representing
 // any official policies, either expressed or implied.
 
-#include "qrclip_config.h"
-#include "qrclip_widget.h"
-#include "qrclip_window.h"
+#ifndef QRCLIP_DEBUG_H
+#define QRCLIP_DEBUG_H
 
-#include <QtWidgets/QApplication>
+#include <QtCore/QDebug>
 
-int main(int argc, char *argv[])
-{
-    QApplication app(argc, argv);
-    QrClipConfig config;
-    QrClipWindow window(config);
+#ifdef QRCLIP_DEBUG
+#define DBG(x) (qDebug() << x)
+#else
+#define DBG(x) ((void)0)
+#endif
 
-    // For whatever reason setQuitOnLastWindowClosed doesn't work here
-    QObject::connect(&window, &QrClipWindow::closed, &app, &QApplication::quit);
-    window.setCentralWidget(new QrClipWidget(&window));
-    window.show();
-    return app.exec();
-}
+#define WARN(x) (qWarning() << x)
+
+#endif // QRCLIP_DEBUG_H

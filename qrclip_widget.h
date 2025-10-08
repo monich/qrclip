@@ -42,8 +42,6 @@
 class QrClipWidget :
     public QLabel
 {
-    class Data;
-    Data* d;
     Q_OBJECT
 
 public:
@@ -52,6 +50,10 @@ public:
 protected:
     QSize minimumSizeHint() const override;
     void resizeEvent(QResizeEvent*) override;
+
+private:
+    class Data;
+    Data* d;
 };
 
 #endif // QRCLIP_WIDGET_H

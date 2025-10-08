@@ -36,6 +36,8 @@
 
 #include "qrclip_widget.h"
 
+#include "qrclip_debug.h"
+
 #include <QtCore/QSignalBlocker>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
@@ -45,13 +47,6 @@
 #include <QtWidgets/QFileDialog>
 
 #include <qrencode.h>
-
-#ifdef QRCLIP_DEBUG
-#include <QtCore/QDebug>
-#define DBG(x) (qDebug() << x)
-#else
-#define DBG(x) ((void)0)
-#endif
 
 //===========================================================================
 // QrClipWidget::Data

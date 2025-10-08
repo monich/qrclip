@@ -34,21 +34,33 @@
 // are those of the authors and should not be interpreted as representing
 // any official policies, either expressed or implied.
 
-#include "qrclip_config.h"
-#include "qrclip_widget.h"
-#include "qrclip_window.h"
+#ifndef QRCLIP_WINDOW_H
+#define QRCLIP_WINDOW_H
 
-#include <QtWidgets/QApplication>
+#include <QtWidgets/QMainWindow>
 
-int main(int argc, char *argv[])
+class QrClipConfig;
+
+class QrClipWindow :
+    public QMainWindow
 {
-    QApplication app(argc, argv);
-    QrClipConfig config;
-    QrClipWindow window(config);
+    Q_OBJECT
 
-    // For whatever reason setQuitOnLastWindowClosed doesn't work here
-    QObject::connect(&window, &QrClipWindow::closed, &app, &QApplication::quit);
-    window.setCentralWidget(new QrClipWidget(&window));
-    window.show();
-    return app.exec();
-}
+public:
+    QrClipWindow(const QrClipConfig&);
+    ~QrClipWindow();
+
+Q_SIGNALS:
+    void closed();
+
+protected:
+    void moveEvent(QMoveEvent*) override;
+    void resizeEvent(QResizeEvent*) override;
+    void closeEvent(QCloseEvent*) override;
+
+private:
+    class Data;
+    Data* d;
+};
+
+#endif // QRCLIP_WINDOW_H
