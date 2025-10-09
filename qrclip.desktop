@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=QR Clip
+Comment=Show clipboard text as a QR code
+Exec=/usr/bin/qrclip
+Icon=qrclip.svg
+Type=Application
