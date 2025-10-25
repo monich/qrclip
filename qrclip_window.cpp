@@ -86,7 +86,7 @@ QrClipWindow::QrClipWindow(
     d(nullptr)
 {
     // First set up the window attributes
-    setWindowFlags(Qt::Tool);
+    setWindowFlag(Qt::WindowMinMaxButtonsHint, false);
     setWindowTitle("QR Clip");
     setWindowIcon(QIcon(":/qrclip/app_icon"));
 
