@@ -34,39 +34,22 @@
 // are those of the authors and should not be interpreted as representing
 // any official policies, either expressed or implied.
 
-#ifndef QRCLIP_WIDGET_H
-#define QRCLIP_WIDGET_H
+#ifndef QRCLIP_APP_H
+#define QRCLIP_APP_H
 
-#include <QtCore/QExplicitlySharedDataPointer>
-#include <QtCore/QSharedData>
-#include <QtGui/QImage>
-#include <QtWidgets/QLabel>
+#include <QtWidgets/QApplication>
 
-class QrClipWidget :
-    public QLabel
+class QrClipApp :
+    public QApplication
 {
     Q_OBJECT
 
 public:
-    struct Block : public QSharedData { virtual ~Block() = default; };
-    typedef QExplicitlySharedDataPointer<Block> Blocker;
-
-    QrClipWidget(QWidget*);
-
-    bool haveQrCode() const;
-    QImage image() const;
-    Blocker blockUpdates();
-
-Q_SIGNALS:
-    void haveQrCodeChanged(bool);
-
-protected:
-    QSize minimumSizeHint() const override;
-    void resizeEvent(QResizeEvent*) override;
+    QrClipApp(int&, char**);
 
 private:
     class Data;
     Data* d;
 };
 
-#endif // QRCLIP_WIDGET_H
+#endif // QRCLIP_APP_H

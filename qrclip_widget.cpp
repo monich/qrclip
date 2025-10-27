@@ -39,14 +39,11 @@
 #include "qrclip_debug.h"
 
 #include <QtCore/QBuffer>
-#include <QtCore/QSignalBlocker>
+#include <QtCore/QPointer>
 #include <QtGui/QClipboard>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QIcon>
-#include <QtGui/QImage>
 #include <QtGui/QPixmap>
-#include <QtWidgets/QAction>
-#include <QtWidgets/QFileDialog>
 #include <QtWidgets/QStyle>
 
 #include <qrencode.h>
@@ -61,28 +58,30 @@ class QrClipWidget::Data :
     Q_OBJECT
 
 public:
+    class BlockImpl;
+
     Data(QLabel*);
     ~Data();
 
+    void connectClipboard();
+    void disconnectClipboard();
     QImage makeImage() const;
+    QImage makeImage(int) const;
+    bool haveQrCode() const;
 
 private Q_SLOTS:
-    void copyQrCode();
-    void saveQrCode();
     void updateQrCode();
 
 private:
     static QString clipboardText();
     static QRcode* makeQrCode(const QString&);
-    inline QLabel* parentLabel() const;
-    QImage makeImage(int) const;
-    void updateQrCodeLabel(QLabel*);
+    QrClipWidget* parentWidget() const;
+    void updateQrCodeWidget(QLabel*);
 
 public:
     const int iBorder;
     const int iSaveScale;
-    QAction* iCopyAction;
-    QAction* iSaveAction;
+    int iUpdatesBlocked;
     QString iAppIconPngBase64;
     QString iLastText;
     QRcode* iCode;
@@ -92,14 +91,11 @@ QrClipWidget::Data::Data(
     QLabel* aLabel) :
     QObject(aLabel),
     iBorder(2),
-    iSaveScale(2),
-    iCopyAction(new QAction(QIcon::fromTheme("edit-copy"), "Copy", this)),
-    iSaveAction(new QAction(QIcon::fromTheme("document-save"), "Save", this)),
+    iSaveScale(5),
+    iUpdatesBlocked(0),
     iLastText(clipboardText()),
     iCode(makeQrCode(iLastText))
 {
-    QClipboard* clip = qGuiApp->clipboard();
-
     QPixmap appIconPixmap(":/qrclip/app_icon");
     QBuffer appIconBuffer;
     appIconBuffer.open(QIODevice::WriteOnly);
@@ -107,19 +103,8 @@ QrClipWidget::Data::Data(
     appIconBuffer.close();
     iAppIconPngBase64 = QString::fromLatin1(appIconBuffer.data().toBase64());
 
-    iCopyAction->setShortcut(QKeySequence::Copy);
-    iCopyAction->setShortcutContext(Qt::WindowShortcut);
-    connect(iCopyAction, &QAction::triggered, this, &Data::copyQrCode);
-    aLabel->addAction(iCopyAction);
-
-    iSaveAction->setShortcut(QKeySequence::Save);
-    iSaveAction->setShortcutContext(Qt::WindowShortcut);
-    connect(iSaveAction, &QAction::triggered, this, &Data::saveQrCode);
-    aLabel->addAction(iSaveAction);
-
-    connect(clip, &QClipboard::dataChanged, this, &Data::updateQrCode);
-    connect(clip, &QClipboard::selectionChanged, this, &Data::updateQrCode);
-    updateQrCodeLabel(aLabel);
+    connectClipboard();
+    updateQrCodeWidget(aLabel);
 }
 
 QrClipWidget::Data::~Data()
@@ -153,16 +138,44 @@ QrClipWidget::Data::makeQrCode(
 }
 
 inline
-QLabel*
-QrClipWidget::Data::parentLabel() const
+QrClipWidget*
+QrClipWidget::Data::parentWidget() const
 {
-    return qobject_cast<QLabel*>(parent());
+    return qobject_cast<QrClipWidget*>(parent());
+}
+
+inline
+bool
+QrClipWidget::Data::haveQrCode() const
+{
+    return iCode && iCode->width;
+}
+
+void
+QrClipWidget::Data::connectClipboard()
+{
+    QClipboard* clip = QGuiApplication::clipboard();
+
+    if (clip) {
+        connect(clip, &QClipboard::dataChanged, this, &Data::updateQrCode);
+        connect(clip, &QClipboard::selectionChanged, this, &Data::updateQrCode);
+    }
+}
+
+void
+QrClipWidget::Data::disconnectClipboard()
+{
+    QClipboard* clip = QGuiApplication::clipboard();
+
+    if (clip) {
+        clip->disconnect(this);
+    }
 }
 
 QImage
 QrClipWidget::Data::makeImage() const
 {
-    const QLabel* l = parentLabel();
+    const QLabel* l = parentWidget();
 
     return makeImage(qMax(1,
             qMin(l->width(), l->height())/(iCode->width + 2 * iBorder)));
@@ -211,65 +224,32 @@ QrClipWidget::Data::makeImage(
 }
 
 void
-QrClipWidget::Data::copyQrCode()
-{
-    if (iCode) {
-        DBG("Copying the image into the clipboard");
-        qGuiApp->clipboard()->setImage(makeImage(iSaveScale));
-    }
-}
-
-void
-QrClipWidget::Data::saveQrCode()
-{
-    if (iCode) {
-        DBG("Saving the image");
-
-        // Stop the clipboard from emitting the signals while QFileDialog
-        // is running its own event loop. That keeps the same QR code that
-        // we are saving on the screen and prevents other issues, too.
-        QSignalBlocker block(qGuiApp->clipboard());
-        QImage image(makeImage(iSaveScale));
-        QString name = QFileDialog::getSaveFileName(parentLabel(),
-            QStringLiteral("Save QR code image"),
-            QStringLiteral("qrcode.png"),
-            QStringLiteral("Image (*.png)"));
-
-        if (!name.isEmpty()) {
-            image.save(name);
-        }
-
-        // Unblock the signals and refresh the state
-        block.unblock();
-        updateQrCode();
-    }
-}
-
-void
 QrClipWidget::Data::updateQrCode()
 {
     QString text(clipboardText());
 
     if (iLastText != text) {
-        iLastText = text;
+        QrClipWidget* widget = parentWidget();
+        const bool hadQrCode = haveQrCode();
+
         DBG(text);
+        iLastText = text;
         QRcode_free(iCode);
         iCode = makeQrCode(iLastText);
-        updateQrCodeLabel(parentLabel());
+        updateQrCodeWidget(widget);
+        if (hadQrCode != haveQrCode()) {
+            Q_EMIT widget->haveQrCodeChanged(!hadQrCode);
+        }
     }
 }
 
 void
-QrClipWidget::Data::updateQrCodeLabel(
+QrClipWidget::Data::updateQrCodeWidget(
     QLabel* aLabel)
 {
-    if (iCode && iCode->width) {
+    if (haveQrCode()) {
         aLabel->setToolTip(iLastText);
         aLabel->setPixmap(QPixmap::fromImage(makeImage()));
-        // Enable the context menu and actions
-        aLabel->setContextMenuPolicy(Qt::ActionsContextMenu);
-        iCopyAction->setEnabled(true);
-        iSaveAction->setEnabled(true);
     } else {
         aLabel->setToolTip(QString());
         aLabel->setPixmap(QPixmap());
@@ -279,10 +259,38 @@ QrClipWidget::Data::updateQrCodeLabel(
             arg(iAppIconPngBase64, iLastText.isEmpty() ?
                 QStringLiteral("Clipboard is empty") :
                 QStringLiteral("Too much text for a QR code")));
-        // Disable the context menu and actions
-        aLabel->setContextMenuPolicy(Qt::NoContextMenu);
-        iCopyAction->setEnabled(false);
-        iSaveAction->setEnabled(false);
+    }
+}
+
+//===========================================================================
+// QrClipWidget::Data::BlockImpl
+//===========================================================================
+
+class QrClipWidget::Data::BlockImpl :
+    public QrClipWidget::Block
+{
+public:
+    BlockImpl(Data*);
+    ~BlockImpl() override;
+    QPointer<Data> iData;
+};
+
+QrClipWidget::Data::BlockImpl::BlockImpl(Data* aData) :
+    iData(aData)
+{
+    if (!aData->iUpdatesBlocked++) {
+        DBG("Blocking QR code updates");
+        aData->disconnectClipboard();
+    }
+}
+
+QrClipWidget::Data::BlockImpl::~BlockImpl()
+{
+    Data* d = iData;
+    if (d && !--d->iUpdatesBlocked) {
+        DBG("Resuming QR code updates");
+        d->connectClipboard();
+        d->updateQrCode();
     }
 }
 
@@ -299,10 +307,28 @@ QrClipWidget::QrClipWidget(
     setMargin(style()->pixelMetric(QStyle::PM_ButtonMargin));
 }
 
+bool
+QrClipWidget::haveQrCode() const
+{
+    return d->haveQrCode();
+}
+
+QImage
+QrClipWidget::image() const
+{
+    return d->haveQrCode() ? d->makeImage(d->iSaveScale) : QImage();
+}
+
+QrClipWidget::Blocker
+QrClipWidget::blockUpdates()
+{
+    return Blocker(new Data::BlockImpl(d));
+}
+
 QSize
 QrClipWidget::minimumSizeHint() const
 {
-    if (d->iCode) {
+    if (d->haveQrCode()) {
         const int size = d->iCode->width + 2 * (d->iBorder + margin());
 
         return QSize(size, size);
@@ -315,7 +341,7 @@ void
 QrClipWidget::resizeEvent(
     QResizeEvent* aEvent)
 {
-    if (d->iCode) {
+    if (d->haveQrCode()) {
         setPixmap(QPixmap::fromImage(d->makeImage()));
     }
     QLabel::resizeEvent(aEvent);

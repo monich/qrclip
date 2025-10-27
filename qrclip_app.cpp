@@ -34,39 +34,83 @@
 // are those of the authors and should not be interpreted as representing
 // any official policies, either expressed or implied.
 
-#ifndef QRCLIP_WIDGET_H
-#define QRCLIP_WIDGET_H
+#include "qrclip_app.h"
+#include "qrclip_config.h"
+#include "qrclip_window.h"
 
-#include <QtCore/QExplicitlySharedDataPointer>
-#include <QtCore/QSharedData>
-#include <QtGui/QImage>
-#include <QtWidgets/QLabel>
+//===========================================================================
+// QrClipApp::Data
+//===========================================================================
 
-class QrClipWidget :
-    public QLabel
+class QrClipApp::Data :
+    public QObject
 {
     Q_OBJECT
 
 public:
-    struct Block : public QSharedData { virtual ~Block() = default; };
-    typedef QExplicitlySharedDataPointer<Block> Blocker;
-
-    QrClipWidget(QWidget*);
-
-    bool haveQrCode() const;
-    QImage image() const;
-    Blocker blockUpdates();
-
-Q_SIGNALS:
-    void haveQrCodeChanged(bool);
-
-protected:
-    QSize minimumSizeHint() const override;
-    void resizeEvent(QResizeEvent*) override;
+    Data(QrClipApp*);
+    ~Data();
 
 private:
-    class Data;
-    Data* d;
+    void createWindow(QApplication*);
+
+private Q_SLOTS:
+    void onRestart();
+
+private:
+    QrClipConfig iConfig;
+    QrClipWindow* iWindow;
+
 };
 
-#endif // QRCLIP_WIDGET_H
+QrClipApp::Data::Data(
+    QrClipApp* aApp) :
+    QObject(aApp),
+    iWindow(nullptr)
+{
+    createWindow(aApp);
+}
+
+QrClipApp::Data::~Data()
+{
+    delete iWindow;
+}
+
+void
+QrClipApp::Data::onRestart()
+{
+    QApplication* app = qobject_cast<QApplication*>(parent());
+
+    // Delete the old window later because it's actually the one
+    // who emitted the signal.
+    iWindow->disconnect(app);
+    iWindow->hide();
+    iWindow->deleteLater();
+    createWindow(app);
+}
+
+void
+QrClipApp::Data::createWindow(
+    QApplication* aApp)
+{
+    iWindow = new QrClipWindow(iConfig);
+    connect(iWindow, &QrClipWindow::restart, this, &Data::onRestart);
+    connect(iWindow, &QrClipWindow::closed, aApp, &QApplication::quit);
+    iWindow->show();
+}
+
+//===========================================================================
+// QrClipApp
+//===========================================================================
+
+QrClipApp::QrClipApp(
+    int& aArgc,
+    char** aArgv) :
+    QApplication(aArgc, aArgv),
+    d(new Data(this))
+{
+    // We are explicitly reacting to QrClipWindow::closed signal
+    setQuitOnLastWindowClosed(false);
+}
+
+#include "qrclip_app.moc"

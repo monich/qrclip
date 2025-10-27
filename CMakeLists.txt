@@ -19,6 +19,8 @@ set(SRC
     main.cpp
     qrclip.desktop
     qrclip.qrc
+    qrclip_app.cpp
+    qrclip_app.h
     qrclip_config.cpp
     qrclip_config.h
     qrclip_debug.h

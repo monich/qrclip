@@ -48,9 +48,9 @@ class QrClipWindow :
 
 public:
     QrClipWindow(const QrClipConfig&);
-    ~QrClipWindow();
 
 Q_SIGNALS:
+    void restart();
     void closed();
 
 protected:

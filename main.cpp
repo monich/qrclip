@@ -34,21 +34,9 @@
 // are those of the authors and should not be interpreted as representing
 // any official policies, either expressed or implied.
 
-#include "qrclip_config.h"
-#include "qrclip_widget.h"
-#include "qrclip_window.h"
-
-#include <QtWidgets/QApplication>
+#include "qrclip_app.h"
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
-    QrClipConfig config;
-    QrClipWindow window(config);
-
-    // For whatever reason setQuitOnLastWindowClosed doesn't work here
-    QObject::connect(&window, &QrClipWindow::closed, &app, &QApplication::quit);
-    window.setCentralWidget(new QrClipWidget(&window));
-    window.show();
-    return app.exec();
+    return QrClipApp(argc, argv).exec();
 }
